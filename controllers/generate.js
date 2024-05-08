@@ -1,4 +1,5 @@
 export async function generateTrip(req, res) {
+  const timeout = 25;
   let result = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     // The body contains the query
@@ -7,11 +8,11 @@ export async function generateTrip(req, res) {
     body:
       "data=" +
       encodeURIComponent(`
-      [out:json];
+      [out:json][timeout:${timeout}];
       area[name="İstanbul"];
-      nwr[tourism = "museum"](area);
+      nwr[tourism][tourism!="hostel"][tourism!="hotel"][tourism!="guest_house"][tourism!="apartment"](area)[tourism!="information"](area)[name](area);
       out center;
-        `),
+      `),
   }).then((res) => res.json());
   res.status(200).send({
     data: result,
