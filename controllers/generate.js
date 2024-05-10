@@ -1,40 +1,47 @@
 // taginfo: https://taginfo.openstreetmap.org/tags
-
+// test bbox value: 7.0,50.6,7.3,50.8  
+// test bbox value belongs to  Bonn/Germany
 const filters = {
-  views: "nwr[tourism='viewpoint'](area.a);",
-  historical: "nwr[~'^historic(:.*)?$'~'.'][~'^wiki.*?$'~'.'](area.a);",
+  views: "nwr[tourism='viewpoint'];",
+  historical: "nwr[~'^historic(:.*)?$'~'.'][~'^wiki.*?$'~'.'];",
   cultural:
-    "nwr[tourism][name][wikidata][tourism!='hostel'][tourism!='hotel'][tourism!='viewpoint'][tourism!='guest_house'][tourism!='apartment'](area.a)[tourism!='information'](area.a)[tourism!='motel'][tourism!='caravan_site'];",
-  //leisure:"nwr[~'^leisure(.*)?$'~'.''][name](area.a);",
-  //cuisine: "nwr[amenity=restaurant][cuisine][name](area.a);",
-  religious: "nwr[amenity=place_of_worship][wikipedia](area.a);",
+    "nwr[tourism][name][wikidata][tourism!='hostel'][tourism!='hotel'][tourism!='viewpoint'][tourism!='guest_house'][tourism!='apartment'][tourism!='information'][tourism!='motel'][tourism!='caravan_site'];",
+  //leisure:"nwr[~'^leisure(.*)?$'~'.''][name];",
+  //cuisine: "nwr[amenity=restaurant][cuisine][name];",
+  religious: "nwr[amenity=place_of_worship][wikipedia];",
 };
 
 export async function generateTrip(req, res) {
   let filterText = "";
-  let filter;
+  let filterList;
   const timeout = 25;
+  const { bbox, filter } = req.query;
 
-  if (req.query.filter) {
-    filter = req.query.filter.split(",").map((text)=>text.trim());
+  if (!bbox) {
+    res.status(400).send({
+      data: {
+        error: "Provide a Bounding Box",
+      },
+    });
   }
 
-  for (const key of filter) {
+  if (filter) {
+    filterList = filter.split(",").map((text) => text.trim());
+  }
+
+  for (const key of filterList) {
     if (Object.keys(filters).includes(key)) {
       filterText += filters[key];
     }
   }
 
-  let result = await fetch("https://overpass-api.de/api/interpreter", {
+  let result = await fetch(`https://overpass-api.de/api/interpreter`, {
     method: "POST",
     body:
       "data=" +
       encodeURIComponent(`
-      [out:json][timeout:${timeout}];
-      area[name="İstanbul"]->.a;
-      (
-        ${filterText}
-      );
+      [out:json][timeout:${timeout}][bbox:${bbox}];
+      (${filterText});
       out center;
       `),
   }).then((res) => res.json());
