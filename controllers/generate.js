@@ -1,5 +1,5 @@
 // taginfo: https://taginfo.openstreetmap.org/tags
-// test bbox value: 7.0,50.6,7.3,50.8  
+// test bbox value: 50.6,7.0,50.8,7.3  
 // test bbox value belongs to  Bonn/Germany
 const filters = {
   views: "nwr[tourism='viewpoint'];",
@@ -13,7 +13,7 @@ const filters = {
 
 export async function generateTrip(req, res) {
   let filterText = "";
-  let filterList;
+  let filterList = [];
   const timeout = 25;
   const { bbox, filter } = req.query;
 
@@ -34,6 +34,8 @@ export async function generateTrip(req, res) {
       filterText += filters[key];
     }
   }
+
+  console.log(filterText);
 
   let result = await fetch(`https://overpass-api.de/api/interpreter`, {
     method: "POST",
