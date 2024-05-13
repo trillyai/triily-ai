@@ -13,12 +13,11 @@ const filters = {
 };
 
 export async function generateTrip(req, res) {
-  let filterText = "";
-  let areaText = "";
   let areaList = [];
   let filterList = [];
+  const output = [];
   const timeout = 25;
-  const { bbox, filter, area } = req.query;
+  const { filter, area } = req.query;
 
   if (!area) {
     res.status(400).send({
@@ -35,50 +34,51 @@ export async function generateTrip(req, res) {
     areaList = area.split(",").map((text) => text.trim());
   }
 
-  for (const key of filterList) {
-    if (Object.keys(filters).includes(key)) {
-      filterText += filters[key];
-    }
-  }
-
-  for (const element of areaList) {
-    areaText += `area[name='${element}'];` 
-  }
-
-  console.log(areaText,filterText);
-
-  let result = await fetch(`https://overpass-api.de/api/interpreter`, {
-    method: "POST",
-    body:
-      "data=" +
-      encodeURIComponent(`
-      [out:json][timeout:${timeout}];
-      (${areaText})->.a;
-      (${filterText});
-      out center;
-      `),
-  })
-    .then((res) => res.json())
-    .then((res) => res.elements);
-
   let totLat = 0;
   let totLon = 0;
-  for (const node of result) {
 
-    if (node.center) {
-      totLat += node.center.lat;
-      totLon += node.center.lon;
-    } else if (node.lat && node.lon) {
-      totLat += node.lat;
-      totLon += node.lon;
+  for (const key of filterList) {
+    if (Object.keys(filters).includes(key)) {
+      for (const element of areaList) {
+        await fetch(`https://overpass-api.de/api/interpreter`, {
+          method: "POST",
+          body:
+            "data=" +
+            encodeURIComponent(`
+            [out:json][timeout:${timeout}];
+            (area[name='${element}'];)->.a;
+            (${filters[key]});
+            out center;
+        `),
+        })
+          .then((res) => res.json())
+          .then((res) =>
+            res.elements.map((node) => {
+              let lat, lon;
+
+              if (node.center) {
+                lat = node.center.lat;
+                lon = node.center.lon;
+              } else if (node.lat && node.lon) {
+                lat = node.lat;
+                lon = node.lon;
+              }
+
+              totLat += lat;
+              totLon += lon;
+
+             output.push({ ...node, area: element, filter: key });
+            })
+          );
+      }
     }
   }
 
-  const avgLat = totLat / result.length;
-  const avgLon = totLon / result.length;
+  const avgLat = totLat / output.length;
+  const avgLon = totLon / output.length;
 
   res.status(200).send({
-    data: result,
+    data: output,
     avgLat,
     avgLon,
   });
