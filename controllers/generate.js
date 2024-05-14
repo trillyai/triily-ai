@@ -55,7 +55,6 @@ export async function generateTrip(req, res) {
           .then((res) =>
             res.elements.map((node) => {
               let lat, lon;
-
               if (node.center) {
                 lat = node.center.lat;
                 lon = node.center.lon;
@@ -63,11 +62,25 @@ export async function generateTrip(req, res) {
                 lat = node.lat;
                 lon = node.lon;
               }
-
               totLat += lat;
               totLon += lon;
-
-              output.push({ ...node, area: element, filter: key });
+              let temp = output.map((e) => e.id).indexOf(node.id);
+              if (temp === -1) {
+                output.push({
+                  id: node.id,
+                  type: node.type,
+                  tags: node.tags,
+                  area: element,
+                  filter: key,
+                  lat,
+                  lon,
+                });
+              } else {
+                output[temp] = {
+                  ...output[temp],
+                  area: `${output[temp].area + "," + element}`,
+                };
+              }
             })
           );
       }
