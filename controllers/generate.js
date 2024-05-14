@@ -23,7 +23,7 @@ export async function generateTrip(req, res) {
   const { filter, area, distance } = req.query;
   const _distance = distance ?? 0.3;
   if (!area) {
-    res.status(400).send({
+   return res.status(400).send({
       data: {
         error: "Provide at least one area.",
       },
