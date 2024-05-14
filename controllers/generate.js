@@ -2,6 +2,8 @@
 // test 'area' param: Ümraniye,Fatih
 // test 'filter' param: views
 
+import { getDistanceFromLatLonInKm } from "../utils/distance.js";
+
 const filters = {
   views: "nwr[tourism='viewpoint'](area.a);",
   historical: "nwr[~'^historic(:.*)?$'~'.'][~'^wiki.*?$'~'.'](area.a);",
@@ -17,8 +19,9 @@ export async function generateTrip(req, res) {
   let filterList = [];
   const output = [];
   const timeout = 25;
-  const { filter, area } = req.query;
-
+  
+  const { filter, area, distance } = req.query;
+  const _distance = distance ?? 0.3;
   if (!area) {
     res.status(400).send({
       data: {
@@ -64,6 +67,16 @@ export async function generateTrip(req, res) {
               }
               totLat += lat;
               totLon += lon;
+
+              res.elements.map((n) =>{
+                if(getDistanceFromLatLonInKm(n.lat, n.lon, lat, lon) <= _distance && n.id !== node.id){
+                  if(!node.closeNodes){
+                    node.closeNodes = [];
+                  }
+                  node.closeNodes.push(n.id);
+                }
+              });
+              
               let temp = output.map((e) => e.id).indexOf(node.id);
               if (temp === -1) {
                 output.push({
@@ -74,6 +87,7 @@ export async function generateTrip(req, res) {
                   filter: key,
                   lat,
                   lon,
+                  closeNodes: node.closeNodes
                 });
               } else {
                 output[temp] = {
