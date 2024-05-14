@@ -67,7 +67,7 @@ export async function generateTrip(req, res) {
               totLat += lat;
               totLon += lon;
 
-             output.push({ ...node, area: element, filter: key });
+              output.push({ ...node, area: element, filter: key });
             })
           );
       }
