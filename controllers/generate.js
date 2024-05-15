@@ -41,10 +41,16 @@ export async function generateTrip(req, res) {
     areaList = area.split(",").map((text) => text.trim());
   }
 
-  // averages lat and lon values for each area to choose initial point for each
-  const avgs = {};
+  const counts = {};
+  for (const key of filterList) {
+    counts[key] = 0;
+  }
+
+  // averages lat and lon values for each area to choose initial point for each and number of nodes by filter
+
+  const info = {};
   for (const element of areaList) {
-    avgs[element] = { lat: 0, lon: 0 };
+    info[element] = { avgLat: 0, avgLon: 0, counts: { ...counts } };
   }
 
   // send a request to gather data for each filter and area
@@ -75,12 +81,14 @@ export async function generateTrip(req, res) {
                 lon = node.lon;
               }
               // collect and create avg values for each area
-              if (avgs[element]) {
-                avgs[element].lat =
-                  (avgs[element].lat + lat) / (avgs[element].lat === 0 ? 1 : 2);
-                avgs[element].lon =
-                  (avgs[element].lon + lon) / (avgs[element].lat === 0 ? 1 : 2);
-              }
+
+              info[element].avgLat =
+                (info[element].avgLat + lat) /
+                (info[element].avgLat === 0 ? 1 : 2);
+              info[element].avgLon =
+                (info[element].avgLon + lon) /
+                (info[element].avgLon === 0 ? 1 : 2);
+              info[element].counts[key] += 1;
               // if the element have close nodes save their ids.
               res.elements.map((n) => {
                 if (
@@ -121,6 +129,6 @@ export async function generateTrip(req, res) {
 
   res.status(200).send({
     data: output,
-    avgs,
+    info,
   });
 }
