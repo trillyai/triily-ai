@@ -19,27 +19,35 @@ export async function generateTrip(req, res) {
   let filterList = [];
   const output = [];
   const timeout = 25;
-  
+
   const { filter, area, distance } = req.query;
+  //default distance value (to make group the places) is 300m
   const _distance = distance ?? 0.3;
+
+  // if area does not provided throw an error
   if (!area) {
-   return res.status(400).send({
+    return res.status(400).send({
       data: {
         error: "Provide at least one area.",
       },
     });
   }
-
+  // create filter array
   if (filter) {
     filterList = filter.split(",").map((text) => text.trim());
   }
+  // create area array
   if (area) {
     areaList = area.split(",").map((text) => text.trim());
   }
 
-  let totLat = 0;
-  let totLon = 0;
+  // averages lat and lon values for each area to choose initial point for each
+  const avgs = {};
+  for (const element of areaList) {
+    avgs[element] = { lat: 0, lon: 0 };
+  }
 
+  // send a request to gather data for each filter and area
   for (const key of filterList) {
     if (Object.keys(filters).includes(key)) {
       for (const element of areaList) {
@@ -57,6 +65,7 @@ export async function generateTrip(req, res) {
           .then((res) => res.json())
           .then((res) =>
             res.elements.map((node) => {
+              // gather lat, lon in different ways in case the type is polygon or smth.
               let lat, lon;
               if (node.center) {
                 lat = node.center.lat;
@@ -65,18 +74,27 @@ export async function generateTrip(req, res) {
                 lat = node.lat;
                 lon = node.lon;
               }
-              totLat += lat;
-              totLon += lon;
-
-              res.elements.map((n) =>{
-                if(getDistanceFromLatLonInKm(n.lat, n.lon, lat, lon) <= _distance && n.id !== node.id){
-                  if(!node.closeNodes){
+              // collect and create avg values for each area
+              if (avgs[element]) {
+                avgs[element].lat =
+                  (avgs[element].lat + lat) / (avgs[element].lat === 0 ? 1 : 2);
+                avgs[element].lon =
+                  (avgs[element].lon + lon) / (avgs[element].lat === 0 ? 1 : 2);
+              }
+              // if the element have close nodes save their ids.
+              res.elements.map((n) => {
+                if (
+                  getDistanceFromLatLonInKm(n.lat, n.lon, lat, lon) <=
+                    _distance &&
+                  n.id !== node.id
+                ) {
+                  if (!node.closeNodes) {
                     node.closeNodes = [];
                   }
                   node.closeNodes.push(n.id);
                 }
               });
-              
+              // if output array has some conflict nodes, ignore them and add new ones.
               let temp = output.map((e) => e.id).indexOf(node.id);
               if (temp === -1) {
                 output.push({
@@ -87,7 +105,7 @@ export async function generateTrip(req, res) {
                   filter: key,
                   lat,
                   lon,
-                  closeNodes: node.closeNodes
+                  closeNodes: node.closeNodes,
                 });
               } else {
                 output[temp] = {
@@ -101,12 +119,8 @@ export async function generateTrip(req, res) {
     }
   }
 
-  const avgLat = totLat / output.length;
-  const avgLon = totLon / output.length;
-
   res.status(200).send({
     data: output,
-    avgLat,
-    avgLon,
+    avgs,
   });
 }
