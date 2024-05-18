@@ -99,7 +99,7 @@ export async function generateTrip(req, res) {
                   if (!node.closeNodes) {
                     node.closeNodes = [];
                   }
-                  node.closeNodes.push(n.id);
+                  node.closeNodes.push({ id: n.id, filter: key });
                 }
               });
               // if output array has some conflict nodes, ignore them and add new ones.
@@ -118,7 +118,12 @@ export async function generateTrip(req, res) {
               } else {
                 output[temp] = {
                   ...output[temp],
-                  area: `${output[temp].area + "," + element}`,
+                  area: output[temp].area.split(",").includes(element)
+                    ? output[temp].area
+                    : `${output[temp].area + "," + element}`,
+                  filter: output[temp].filter.split(",").includes(key)
+                    ? output[temp].filter
+                    : `${output[temp].filter + "," + key}`,
                 };
               }
             })
@@ -127,8 +132,36 @@ export async function generateTrip(req, res) {
     }
   }
 
+  let result = output
+    .map((element) => {
+      return {
+        ...element,
+        score: scoreNode(element, filterList),
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
   res.status(200).send({
-    data: output,
+    data: result,
     info,
   });
+}
+
+function scoreNode(node, mainFilter) {
+  let score = 0;
+
+  score += Math.floor(Object.keys(node.tags).length / 10);
+
+  if (node.closeNodes) {
+    score += Math.floor(node.closeNodes.length / 3);
+    node.closeNodes.forEach((element) => {
+      const others = mainFilter.filter((e) => e !== node.filter.split(",")[0]);
+      if (others.includes(element.filter.split(",")[0])) {
+        score += 1;
+      }
+    });
+  }
+  const filterLength = node.filter.split(",").length;
+  score += filterLength > 1 ? filterLength * 3 : 0;
+  return score;
 }
