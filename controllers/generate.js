@@ -3,6 +3,12 @@
 // test 'filter' param: views
 
 import { getDistanceFromLatLonInKm } from "../utils/distance.js";
+import {
+  getWikidataDesc,
+  getWikimediaURL,
+  getWikipediaDesc,
+  getWikipediaImg,
+} from "../utils/wiki.js";
 
 const filters = {
   views: "nwr[tourism='viewpoint'](area.a);",
@@ -19,6 +25,7 @@ export async function generateTrip(req, res) {
   let filterList = [];
   const output = [];
   const timeout = 25;
+  const maxPlaces = 3;
 
   const { filter, area, distance } = req.query;
   //default distance value (to make group the places) is 300m
@@ -132,7 +139,7 @@ export async function generateTrip(req, res) {
     }
   }
 
-  let result = output
+  const sorted = output
     .map((element) => {
       return {
         ...element,
@@ -141,6 +148,21 @@ export async function generateTrip(req, res) {
     })
     .sort((a, b) => b.score - a.score);
 
+  const result = [];
+  for (const a of areaList) {
+    let count = 0;
+    for (const n of sorted) {
+      if (
+        n.area.split(",").includes(a) &&
+        count < maxPlaces &&
+        result.filter((r) => r.id === n.id).length === 0
+      ) {
+        const temp = await shapeResult(n);
+        result.push(temp);
+        count++;
+      }
+    }
+  }
   res.status(200).send({
     data: result,
     info,
@@ -164,4 +186,29 @@ function scoreNode(node, mainFilter) {
   const filterLength = node.filter.split(",").length;
   score += filterLength > 1 ? filterLength * 3 : 0;
   return score;
+}
+
+async function shapeResult(n) {
+  const imgURL = n.tags.wikipedia
+    ? await getWikipediaImg(n.tags.wikipedia)
+    : n.tags.wikimedia_commons
+    ? await getWikimediaURL(n.tags.wikimedia_commons)
+    : undefined;
+  const wikidata = n.tags.wikidata
+    ? await getWikidataDesc(n.tags.wikidata)
+    : undefined;
+  const wikipedia = n.tags.wikipedia
+    ? await getWikipediaDesc(n.tags.wikipedia)
+    : undefined;
+  const desc = wikidata ?? wikipedia ?? undefined;
+  return {
+    id: n.id,
+    name: n.tags.name,
+    lat: n.lat,
+    lon: n.lon,
+    filter: n.filter,
+    area: n.area,
+    imgURL,
+    desc,
+  };
 }
