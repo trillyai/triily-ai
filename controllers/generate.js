@@ -157,7 +157,7 @@ export async function generateTrip(req, res) {
         count < maxPlaces &&
         result.filter((r) => r.id === n.id).length === 0
       ) {
-        const temp = await shapeResult(n);
+        const temp = await shapeResult(n, sorted);
         result.push(temp);
         count++;
       }
@@ -188,7 +188,8 @@ function scoreNode(node, mainFilter) {
   return score;
 }
 
-async function shapeResult(n) {
+async function shapeResult(n,nodes, type="parent") {
+
   const imgURL = n.tags.wikipedia
     ? await getWikipediaImg(n.tags.wikipedia)
     : n.tags.wikimedia_commons
@@ -201,6 +202,12 @@ async function shapeResult(n) {
     ? await getWikipediaDesc(n.tags.wikipedia)
     : undefined;
   const desc = wikidata ?? wikipedia ?? undefined;
+  const closeNodes = []
+  if(n.closeNodes && type === "parent" ){
+    for(const closeNode of n.closeNodes){
+      closeNodes.push(await shapeResult(nodes.find((_n)=>_n.id === closeNode.id),nodes, "child")) 
+    }
+  }
   return {
     id: n.id,
     name: n.tags.name,
@@ -210,5 +217,6 @@ async function shapeResult(n) {
     area: n.area,
     imgURL,
     desc,
+    closeNodes: closeNodes.length>0 ? closeNodes : undefined
   };
 }
