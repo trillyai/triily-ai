@@ -13,11 +13,11 @@ import {
 const filters = {
   views: "nwr[tourism='viewpoint'](area.a);",
   historical: "nwr[~'^historic(:.*)?$'~'.'][~'^wiki.*?$'~'.'](area.a);",
-  cultural:
+  tourism:
     "nwr[tourism][name][wikidata][tourism!='hostel'][tourism!='hotel'][tourism!='viewpoint'][tourism!='guest_house'][tourism!='apartment'][tourism!='information'][tourism!='motel'][tourism!='caravan_site'](area.a);",
-  //leisure:"nwr[~'^leisure(.*)?$'~'.''][name](area.a);",
-  //cuisine: "nwr[amenity=restaurant][cuisine][name](area.a);",
   religious: "nwr[amenity=place_of_worship][wikipedia](area.a);",
+  natural: "nwr[landuse='forest'][~'^wiki.*?$'~'.'](area.a);nwr[natural][natural!='bay'][natural!='peninsula'][~'^wiki.*?$'~'.'](area.a);nwr[hamlet='place'][~'^wiki.*?$'~'.'](area.a);",
+  museum: "nwr[tourism='museum'][~'^wiki.*?$'~'.'](area.a);"
 };
 
 export async function generateTrip(req, res) {
