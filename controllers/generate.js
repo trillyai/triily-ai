@@ -9,6 +9,7 @@ import {
   getWikipediaDesc,
   getWikipediaImg,
 } from "../utils/wiki.js";
+import fetch from 'node-fetch';
 
 const filters = {
   views: "nwr[tourism='viewpoint'](area.a);",
